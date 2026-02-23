@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cabrino AI Chat</title>
+<style>
+body { font-family:'Segoe UI',sans-serif; background:#121212; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+#chat-container { width:480px; height:620px; background:#1f1f1f; padding:20px; border-radius:15px; display:flex; flex-direction:column; box-shadow:0 0 20px #000; }
+#messages { flex:1; overflow-y:auto; margin-bottom:10px; padding-right:5px; }
+.message { display:flex; margin:5px 0; max-width:80%; }
+.user { justify-content:flex-end; }
+.bot { justify-content:flex-start; }
+.avatar { width:36px; height:36px; border-radius:50%; margin-right:8px; }
+.text { padding:10px 15px; border-radius:15px; word-wrap:break-word; line-height:1.4; }
+.user .text { background:#0d6efd; border-bottom-right-radius:0; color:#fff; }
+.bot .text { background:#198754; border-bottom-left-radius:0; color:#fff; }
+#input-container { display:flex; margin-top:5px; }
+input { flex:1; padding:10px; border-radius:10px; border:none; margin-right:5px; }
+button { padding:10px 15px; border:none; border-radius:10px; background:#0d6efd; color:#fff; cursor:pointer; }
+::-webkit-scrollbar { width:8px; }
+::-webkit-scrollbar-thumb { background:#555; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div id="chat-container">
+  <div id="messages"></div>
+  <div id="input-container">
+    <input type="text" id="userInput" placeholder="Écris un message..." />
+    <button onclick="sendMessage()">Envoyer</button>
+  </div>
+</div>
+
+<script>
+let history = [];
+
+async function sendMessage() {
+  const input = document.getElementById("userInput");
+  const message = input.value.trim();
+  if(!message) return;
+
+  addMessage("user", message);
+  input.value = "";
+
+  const botDiv = addMessage("bot", "…");
+
+  try {
+    const res = await fetch("/chat", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ message, history })
+    });
+    const data = await res.json();
+
+    typeEffect(botDiv.querySelector(".text"), data.reply);
+
+    history.push({ role:"user", content: message });
+    history.push({ role:"assistant", content: data.reply });
+  } catch(err) {
+    botDiv.querySelector(".text").textContent = "Erreur de l'IA 😢";
+  }
+}
+
+function addMessage(sender, text) {
+  const div = document.createElement("div");
+  div.className = `message ${sender}`;
+  const avatar = document.createElement("img");
+  avatar.className = "avatar";
+  avatar.src = sender==="user"
+    ? "https://i.ibb.co/8xkK4qG/user.png"
+    : "https://i.ibb.co/7QpKsCX/bot.png";
+  const textDiv = document.createElement("div");
+  textDiv.className = "text";
+  textDiv.textContent = text;
+
+  if(sender==="user"){ div.appendChild(textDiv); div.appendChild(avatar);}
+  else{ div.appendChild(avatar); div.appendChild(textDiv);}
+
+  document.getElementById("messages").appendChild(div);
+  div.scrollIntoView({ behavior: "smooth" });
+
+  return div;
+}
+
+function typeEffect(element, text){
+  element.textContent = "";
+  let i=0;
+  const interval = setInterval(()=>{
+    if(i<text.length){ element.textContent += text.charAt(i); i++; } 
+    else clearInterval(interval);
+  },20);
+}
+</script>
+
+</body>
+</html>
